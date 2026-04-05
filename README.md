@@ -12,19 +12,16 @@ Spring Boot-ზე აგებული RESTful API ბიბლიოთეკ
 
 ### გაშვება
 ```bash
-# კლონირება
 git clone <repo-url>
 cd library-api
-
-# Build & Run
 ./mvnw spring-boot:run
 ```
 
-სერვერი გაეშვება: **http://localhost:8080**
-
-H2 Console (dev): **http://localhost:8080/h2-console**
-- JDBC URL: `jdbc:h2:mem:librarydb`
-- Username: `sa` | Password: _(ცარიელი)_
+| URL | აღწერა |
+|-----|--------|
+| http://localhost:8080/swagger-ui.html | **Swagger UI** — ინტერაქტიური დოკუმენტაცია |
+| http://localhost:8080/v3/api-docs | OpenAPI JSON spec |
+| http://localhost:8080/h2-console | H2 DB Console (JDBC: `jdbc:h2:mem:librarydb`, user: `sa`) |
 
 ---
 
@@ -32,145 +29,63 @@ H2 Console (dev): **http://localhost:8080/h2-console**
 
 ```
 ge.library/
-├── controller/      ← REST endpoints
+├── config/          ← OpenApiConfig (Swagger bean)
+├── controller/      ← REST endpoints (@Tag, @Operation, @ApiResponse)
 ├── service/         ← ბიზნეს ლოგიკა
 ├── repository/      ← Spring Data JPA
-├── entity/          ← DB ცხრილები (@Entity)
+├── mapper/          ← MapStruct (Entity ↔ DTO)
+│   ├── AuthorMapper
+│   ├── BookMapper
+│   └── BorrowMapper
+├── entity/          ← @Entity კლასები
 ├── dto/             ← Request / Response ობიექტები
-└── exception/       ← შეცდომების მართვა
+└── exception/       ← GlobalExceptionHandler
 ```
 
 **Entity კავშირები:**
 - `Author` → `Book` : **@OneToMany** (ერთი ავტორი — ბევრი წიგნი)
-- `Book` → `BorrowRecord` : **@OneToMany** (ერთი წიგნი — ბევრი გაცემის ჩანაწერი)
+- `Book` → `BorrowRecord` : **@ManyToOne**
 
 ---
 
 ## 📋 API Endpoints
 
-### 👤 Authors — `/api/authors`
+### 👤 Authors `/api/authors`
 
 | Method | URL | აღწერა |
 |--------|-----|--------|
-| `GET` | `/api/authors` | ყველა ავტორი |
-| `GET` | `/api/authors?search=ილია` | ავტორის ძებნა |
-| `GET` | `/api/authors/{id}` | ავტორი ID-ით |
-| `POST` | `/api/authors` | ახალი ავტორი |
-| `PUT` | `/api/authors/{id}` | ავტორის განახლება |
-| `DELETE` | `/api/authors/{id}` | ავტორის წაშლა |
+| GET | `/api/authors` | ყველა ავტორი |
+| GET | `/api/authors?search=ილია` | ძებნა |
+| GET | `/api/authors/{id}` | ID-ით |
+| POST | `/api/authors` | შექმნა |
+| PUT | `/api/authors/{id}` | განახლება |
+| DELETE | `/api/authors/{id}` | წაშლა |
 
-**POST /api/authors** — Request Body:
-```json
-{
-  "firstName": "გიორგი",
-  "lastName": "ლეონიძე",
-  "biography": "ქართველი პოეტი და რომანისტი"
-}
-```
-
----
-
-### 📖 Books — `/api/books`
+### 📖 Books `/api/books`
 
 | Method | URL | აღწერა |
 |--------|-----|--------|
-| `GET` | `/api/books` | ყველა წიგნი |
-| `GET` | `/api/books?title=ვეფხ` | სათაურით ძებნა |
-| `GET` | `/api/books?genre=პოეზია` | ჟანრით ფილტრი |
-| `GET` | `/api/books?available=true` | ხელმისაწვდომი წიგნები |
-| `GET` | `/api/books/{id}` | წიგნი ID-ით |
-| `GET` | `/api/books/isbn/{isbn}` | წიგნი ISBN-ით |
-| `GET` | `/api/books/author/{authorId}` | ავტორის წიგნები |
-| `POST` | `/api/books` | ახალი წიგნი |
-| `PUT` | `/api/books/{id}` | წიგნის განახლება |
-| `DELETE` | `/api/books/{id}` | წიგნის წაშლა |
+| GET | `/api/books` | ყველა |
+| GET | `/api/books?title=ვეფხ` | სათაურით |
+| GET | `/api/books?genre=პოეზია` | ჟანრით |
+| GET | `/api/books?available=true` | ხელმისაწვდომი |
+| GET | `/api/books/{id}` | ID-ით |
+| GET | `/api/books/isbn/{isbn}` | ISBN-ით |
+| GET | `/api/books/author/{authorId}` | ავტორის წიგნები |
+| POST | `/api/books` | შექმნა |
+| PUT | `/api/books/{id}` | განახლება |
+| DELETE | `/api/books/{id}` | წაშლა |
 
-**POST /api/books** — Request Body:
-```json
-{
-  "title": "ჩემი მოთხრობა",
-  "isbn": "978-9941-0-9999-9",
-  "publishedYear": 2024,
-  "genre": "მოთხრობა",
-  "authorId": 1
-}
-```
-
----
-
-### 🔄 Borrows — `/api/borrows`
+### 🔄 Borrows `/api/borrows`
 
 | Method | URL | აღწერა |
 |--------|-----|--------|
-| `GET` | `/api/borrows` | ყველა ჩანაწერი |
-| `GET` | `/api/borrows?active=true` | მიმდინარე გაცემები |
-| `GET` | `/api/borrows?borrower=გიო` | მსესხებლის ძებნა |
-| `GET` | `/api/borrows?bookId=3` | წიგნის გაცემის ისტორია |
-| `GET` | `/api/borrows/{id}` | ჩანაწერი ID-ით |
-| `POST` | `/api/borrows` | წიგნის გაცემა |
-| `PATCH` | `/api/borrows/return/{bookId}` | წიგნის დაბრუნება |
-
-**POST /api/borrows** — Request Body:
-```json
-{
-  "borrowerName": "გიორგი მაჩაბელი",
-  "bookId": 1
-}
-```
-
----
-
-## ❌ Error Responses
-
-ყველა შეცდომა სტანდარტული ფორმატით ბრუნდება:
-
-```json
-{
-  "status": 404,
-  "message": "წიგნი ID=99 ვერ მოიძებნა",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
-
-ვალიდაციის შეცდომები:
-```json
-{
-  "status": 400,
-  "message": "ვალიდაციის შეცდომა",
-  "timestamp": "2024-01-15T10:30:00",
-  "fieldErrors": {
-    "isbn": "ISBN ფორმატი არასწორია",
-    "title": "სათაური სავალდებულოა"
-  }
-}
-```
-
----
-
-## 🧪 სწრაფი ტესტი (curl)
-
-```bash
-# ყველა ავტორი
-curl http://localhost:8080/api/authors
-
-# ახალი ავტორი
-curl -X POST http://localhost:8080/api/authors \
-  -H "Content-Type: application/json" \
-  -d '{"firstName":"ნინო","lastName":"ჰაიდარი","biography":"თანამედროვე ქართველი მწერალი"}'
-
-# ახალი წიგნი
-curl -X POST http://localhost:8080/api/books \
-  -H "Content-Type: application/json" \
-  -d '{"title":"ახალი ეპოქა","isbn":"978-9941-0-8888-8","publishedYear":2023,"genre":"რომანი","authorId":1}'
-
-# წიგნის გაცემა
-curl -X POST http://localhost:8080/api/borrows \
-  -H "Content-Type: application/json" \
-  -d '{"borrowerName":"გიორგი ბერიძე","bookId":1}'
-
-# წიგნის დაბრუნება
-curl -X PATCH http://localhost:8080/api/borrows/return/1
-```
+| GET | `/api/borrows` | ყველა ჩანაწერი |
+| GET | `/api/borrows?active=true` | მიმდინარე გაცემები |
+| GET | `/api/borrows?borrower=გიო` | მსესხებლის ძებნა |
+| GET | `/api/borrows?bookId=3` | წიგნის ისტორია |
+| POST | `/api/borrows` | წიგნის გაცემა |
+| PATCH | `/api/borrows/return/{bookId}` | დაბრუნება |
 
 ---
 
@@ -180,7 +95,8 @@ curl -X PATCH http://localhost:8080/api/borrows/return/1
 |-----------|--------|
 | Spring Boot 3.2 | ფრეიმვორკი |
 | Spring Data JPA | ORM / Repository |
+| MapStruct 1.5.5 | Entity ↔ DTO mapper |
+| SpringDoc OpenAPI 2.3 | Swagger UI |
 | H2 Database | In-memory DB |
-| Bean Validation | @Valid ვალიდაცია |
+| Bean Validation | @Valid |
 | Lombok | Boilerplate შემცირება |
-| Maven | Build tool |

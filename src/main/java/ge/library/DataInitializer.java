@@ -39,14 +39,6 @@ public class DataInitializer implements CommandLineRunner {
                 .biography("ინგლისელი მწერალი, 'ბეჭდების მბრძანებლის' ავტორი")
                 .build());
 
-        bookRepository.save(Book.builder()
-                .title("ვეფხისტყაოსანი")
-                .isbn("978-9941-0-0001-1")
-                .publishedYear(1200)
-                .genre("პოეზია")
-                .available(true)
-                .author(rustaveli)
-                .build());
 
         bookRepository.save(Book.builder()
                 .title("კაცია-ადამიანი?!")
